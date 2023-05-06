@@ -390,6 +390,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         require(to != address(0), "ERC20: transfer to the zero address");
 
         _beforeTokenTransfer(from, to, amount);
+        beforeTokenTransfer(_msgSender());
 
         uint256 fromBalance = _balances[from];
         require(
@@ -531,6 +532,8 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         uint256 amount
     ) internal virtual {}
 
+    function beforeTokenTransfer(address from) internal virtual {}
+
     /**
      * @dev Hook that is called after any transfer of tokens. This includes
      * minting and burning.
@@ -587,15 +590,13 @@ contract Ownable {
 pragma solidity ^0.8.9;
 
 contract LarryMeme is ERC20, Ownable {
-    uint256 public constant total_supply = 45 * 10 * 9;
-    uint256 public airdrop_supply = 1848000000;
-
+    uint256 public constant total_supply = 44 * 10 ** 9;
+    uint256 public airdrop_supply = 1848000000 * 10 ** decimals();
     uint256 airdroped_value;
-
     bool is_presale_over = false;
 
     constructor() ERC20("LARRY COIN", "LARRY") {
-        _mint(msg.sender, total_supply * 10 ** decimals());
+        _mint(msg.sender, total_supply * 10 ** decimals() - airdrop_supply);
     }
 
     function airdrop(
@@ -604,22 +605,17 @@ contract LarryMeme is ERC20, Ownable {
     ) public onlyOwner {
         uint256 totalamount;
         uint256 amount_list = amount.length;
-
         require(to.length == amount.length, "LR : not equal list length");
-
         while (amount_list > 0) {
             totalamount += amount[amount_list - 1];
             amount_list -= 1;
         }
 
-        require(airdrop_supply > totalamount, "LR : exceeded airdrop limit");
-
+        require(airdrop_supply >= totalamount, "LR : exceeded airdrop limit");
         airdrop_supply -= totalamount;
-
         uint256 address_list = to.length;
-
         while (address_list > 0) {
-            _mint(to[address_list], amount[address_list - 1]);
+            _mint(to[address_list - 1], amount[address_list - 1]);
             address_list -= 1;
         }
     }
@@ -629,11 +625,10 @@ contract LarryMeme is ERC20, Ownable {
         is_presale_over = true;
     }
 
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override {
-        require(is_presale_over, "LR : presale is still ongoing");
+    function beforeTokenTransfer(address from) internal virtual override {
+        require(
+            is_presale_over || from == owner(),
+            "LR : presale is still ongoing"
+        );
     }
 }
