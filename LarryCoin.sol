@@ -552,12 +552,88 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     ) internal virtual {}
 }
 
+contract Ownable {
+    // Variable that maintains
+    // owner address
+    address private _owner;
+
+    // Sets the original owner of
+    // contract when it is deployed
+    constructor() {
+        _owner = msg.sender;
+    }
+
+    // Publicly exposes who is the
+    // owner of this contract
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
+    // onlyOwner modifier that validates only
+    // if caller of function is contract owner,
+    // otherwise not
+    modifier onlyOwner() {
+        require(isOwner(), "Function accessible only by the owner !!");
+        _;
+    }
+
+    // function for owners to verify their ownership.
+    // Returns true for owners otherwise false
+    function isOwner() public view returns (bool) {
+        return msg.sender == _owner;
+    }
+}
+
 pragma solidity ^0.8.9;
 
-contract LarryMeme is ERC20 {
+contract LarryMeme is ERC20, Ownable {
     uint256 public constant total_supply = 45 * 10 * 9;
+    uint256 public airdrop_supply = 1848000000;
+
+    uint256 airdroped_value;
+
+    bool is_presale_over = false;
 
     constructor() ERC20("LARRY COIN", "LARRY") {
         _mint(msg.sender, total_supply * 10 ** decimals());
+    }
+
+    function airdrop(
+        address[] calldata to,
+        uint256[] calldata amount
+    ) public onlyOwner {
+        uint256 totalamount;
+        uint256 amount_list = amount.length;
+
+        require(to.length == amount.length, "LR : not equal list length");
+
+        while (amount_list > 0) {
+            totalamount += amount[amount_list - 1];
+            amount_list -= 1;
+        }
+
+        require(airdrop_supply > totalamount, "LR : exceeded airdrop limit");
+
+        airdrop_supply -= totalamount;
+
+        uint256 address_list = to.length;
+
+        while (address_list > 0) {
+            _mint(to[address_list], amount[address_list - 1]);
+            address_list -= 1;
+        }
+    }
+
+    function updatePresale() public onlyOwner {
+        require(!is_presale_over, "LR : presale already completed");
+        is_presale_over = true;
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        require(is_presale_over, "LR : presale is still ongoing");
     }
 }
